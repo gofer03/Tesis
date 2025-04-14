@@ -1,0 +1,80 @@
+#Anexo 5.
+Implementación del script para la geo codificación de la ubicación de la población de estudio.
+
+import pandas as pd
+from geopy.geocoders import Nominatim, ArcGIS, GoogleV3
+from geopy.extra.rate_limiter import RateLimiter
+import re
+import time
+
+# Ruta del archivo y nombre del nuevo archivo
+input_path = "C:/Users/diefe/OneDrive/Escritorio/direccion.xlsx"
+output_path = "C:/Users/diefe/OneDrive/Escritorio/ubicaciones_geo.xlsx"
+
+# Diccionario de reemplazo para estandarizar abreviaturas
+replacements = {
+    "CL": "Calle",
+    "CALLE": "Calle",
+    "CLL": "Calle",
+    "KR": "Carrera",
+    "CR": "Carrera",
+    "CRA": "Carrera",
+    "DG": "Diagonal",
+    "TV": "Transversal",
+    "SD": "SIN DATOS",
+    "SIN DATOS": "SIN DATOS",
+    "SIN INFORMACION": "SIN DATOS",
+    "SIN DATPS": "SIN DATOS"
+}
+
+
+# Función para limpiar y estandarizar la dirección
+def clean_address(address):
+    if pd.isna(address) or address.strip() == "":
+        return "SIN DATOS"
+
+    # Reemplazo basado en el diccionario
+    for key, value in replacements.items():
+        address = re.sub(r'\b' + key + r'\b', value, address, flags=re.IGNORECASE)
+
+    # Corrección de espaciado
+    address = re.sub(r'\s+', ' ', address).strip()
+
+    return address
+
+
+# Función para geocodificar usando múltiples servicios
+def geocode_address(geolocators, address):
+    if address == "SIN DATOS":
+        return (None, None)  # Dejar en blanco si es "SIN DATOS"
+    for geolocator in geolocators:
+        try:
+            location = geolocator(address + ", Cali, Colombia", timeout=30)  # Aumentar el timeout
+            if location:
+                return (location.latitude, location.longitude)
+        except Exception as e:
+            print(f"Error geocodificando {address} con {geolocator.func.__self__.__class__.__name__}: {e}")
+            time.sleep(5)  # Espera adicional entre intentos
+    return (None, None)
+
+# Leer el archivo Excel
+df = pd.read_excel(input_path)
+
+# Limpiar y estandarizar las direcciones
+df['Direccion_Estandarizada'] = df['direccion'].apply(clean_address)
+
+# Inicializar los geocodificadores y aplicar RateLimiter
+geolocator_osm = RateLimiter(Nominatim(user_agent="geoapiExercises").geocode, min_delay_seconds=2, max_retries=5)
+geolocator_arcgis = RateLimiter(ArcGIS().geocode, min_delay_seconds=2, max_retries=5)
+
+geolocators = [geolocator_osm, geolocator_arcgis]
+
+# Geocodificar las direcciones usando múltiples servicios
+df[['Latitud', 'Longitud']] = df['Direccion_Estandarizada'].apply(
+    lambda x: pd.Series(geocode_address(geolocators, x))
+)
+
+# Guardar el resultado en un nuevo archivo Excel
+df.to_excel(output_path, index=False)
+
+print(f"Proceso completado. El archivo se ha guardado en {output_path}")
