@@ -1,0 +1,166 @@
+Anexo 4. Generación de análisis bivariado
+
+Generación de gráficos de cajas y bigotes para las variables cuantitativas
+
+# Cargar librerías necesarias
+library(readxl)    
+library(dplyr)     
+library(ggplot2)   
+
+# Cargar los datos desde el archivo Excel
+ruta_archivo <- "C:/Users/diefe/OneDrive/Escritorio/variables_cuanti.xlsx"
+datos_cuanti <- read_excel(ruta_archivo)
+
+# Renombrar la variable "Zscore pt" para usarla en la categorización
+colnames(datos_cuanti)[colnames(datos_cuanti) == "Zscore pt"] <- "zscore_pt"
+
+# Recategorizar zscore_pt en dos grupos
+datos_cuanti <- datos_cuanti %>%
+  mutate(zscore_pt_rec = case_when(
+    zscore_pt > -3 & zscore_pt <= 20 ~ "Desnutrición Moderada",
+    zscore_pt >= -20 & zscore_pt <= -3 ~ "Desnutrición Severa"
+  ))
+
+# Crear una carpeta para guardar los gráficos
+ruta_guardado <- "C:/Users/diefe/OneDrive/Escritorio/Boxplots_Variables"
+dir.create(ruta_guardado, showWarnings = FALSE)
+
+# Nombres de variables para usar en los títulos y ejes
+nombres_variables <- c(
+  "Edad (años)" = "Edad (años)", 
+  "Peso al nacer (g)" = "Peso al nacer (g)", 
+  "Edad de gestación" = "Edad de gestación", 
+  "Perímetro braquial (cm)" = "Perímetro braquial (cm)", 
+  "Peso actual (kg)" = "Peso actual (kg)", 
+  "Talla actual (cm)" = "Talla actual (cm)", 
+  "Imc" = "IMC", 
+  "Talla al nacer (cm)" = "Talla al nacer (cm)"
+)
+
+# Obtener la lista de variables cuantitativas (todas excepto zscore_pt_rec)
+variables_cuantitativas <- names(nombres_variables)
+
+# Generar boxplots para cada variable cuantitativa
+for (var in variables_cuantitativas) {
+  
+  # Para desnutrición moderada
+  plot_moderada <- ggplot(
+    datos_cuanti %>% filter(zscore_pt_rec == "Desnutrición Moderada"),
+    aes(x = zscore_pt_rec, y = .data[[var]])) +
+    geom_boxplot(fill = "#ADD8E6") +  # Color azul pastel
+    labs(title = paste("Distribución de", nombres_variables[var], "- Desnutrición Moderada"),
+         x = "Categoría",
+         y = nombres_variables[var]) + 
+    theme_minimal()
+  
+  # Guardar el gráfico
+  ggsave(filename = paste0(ruta_guardado, "/", var, "_moderada.png"),
+         plot = plot_moderada, width = 6, height = 4, dpi = 300)
+
+  # Para desnutrición severa
+  plot_severa <- ggplot(
+    datos_cuanti %>% filter(zscore_pt_rec == "Desnutrición Severa"),
+    aes(x = zscore_pt_rec, y = .data[[var]])) +
+    geom_boxplot(fill = "#FF9999") +  # Color rojo pastel
+    labs(title = paste("Distribución de", nombres_variables[var], "- Desnutrición Severa"),
+         x = "Categoría",
+         y = nombres_variables[var]) + 
+    theme_minimal()
+  
+  # Guardar el gráfico
+  ggsave(filename = paste0(ruta_guardado, "/", var, "_severa.png"),
+         plot = plot_severa, width = 6, height = 4, dpi = 300)
+}
+
+print("Gráficos generados y guardados exitosamente.")
+
+Generación de gráfico de barras para las variables cualiativas
+# Cargar librerías necesarias
+library(readxl)    
+library(dplyr)     
+library(ggplot2)   
+library(stats)     
+
+# Cargar el archivo Excel
+ruta_archivo <- "C:/Users/diefe/OneDrive/Escritorio/variables_cuali.xlsx"
+datos_cuali <- read_excel(ruta_archivo)
+
+# Reemplazar valores en Piel reseca, Hiperpigmentación, Palidez, y Edema
+datos_cuali <- datos_cuali %>%
+  mutate(
+    `Piel reseca` = ifelse(`Piel reseca` == 1, "Presente", "No presente"),
+    Hiperpigmentación = ifelse(Hiperpigmentación == 1, "Presente", "No presente"),
+    Palidez = ifelse(Palidez == 1, "Presente", "No presente"),
+    Edema = ifelse(Edema == 1, "Presente", "No presente")
+  )
+
+# Reemplazar valores en Nivel educativo
+datos_cuali <- datos_cuali %>%
+  mutate(`Nivel educativo` = case_when(
+    `Nivel educativo` == 1 ~ "Sin educación",
+    `Nivel educativo` %in% c(2, 3) ~ "Educación básica y media",
+    `Nivel educativo` == 4 ~ "Tecnólogo",
+    `Nivel educativo` == 5 ~ "Educación superior"
+  ))
+
+# Reemplazar valores en Estrato
+datos_cuali <- datos_cuali %>%
+  mutate(Estrato = case_when(
+    Estrato %in% c(1, 2) ~ "Estrato bajo",
+    Estrato == 3 ~ "Estrato medio",
+    Estrato %in% c(4, 5) ~ "Estrato alto"
+  ))
+
+# Recategorizar zscore_pt
+datos_cuali <- datos_cuali %>%
+  mutate(zscore_pt = case_when(
+    zscore_pt > -3 & zscore_pt <= 20 ~ "Desnutrición moderada",
+    zscore_pt >= -20 & zscore_pt <= -3 ~ "Desnutrición severa"
+  ))
+
+# Lista de variables categóricas actualizadas
+variables_categoricas <- c("Sexo", "Estrato", "Nivel educativo", "Piel reseca", 
+                           "Hiperpigmentación", "Palidez", "Edema")
+
+# Nombres amigables para los ejes X
+nombres_variables <- c(
+  "Sexo" = "Sexo",
+  "Estrato" = "Estrato socioeconómico",
+  "Nivel educativo" = "Nivel educativo",
+  "Piel reseca" = "Presencia de piel reseca",
+  "Hiperpigmentación" = "Hiperpigmentación",
+  "Palidez" = "Presencia de palidez",
+  "Edema" = "Presencia de edema"
+)
+
+# Realizar análisis bivariado (tablas de contingencia y gráficos de barras)
+for (var in variables_categoricas) {
+  # Tabla de contingencia
+  tabla_contingencia <- table(datos_cuali[[var]], datos_cuali$zscore_pt)
+  print(paste("Tabla de contingencia para", var))
+  print(tabla_contingencia)
+  
+  # Test de Chi-cuadrado
+  chi2_test <- chisq.test(tabla_contingencia)
+  print(paste("Resultado del Test Chi-cuadrado para", var))
+  print(chi2_test)
+  
+  # Calcular los porcentajes para cada categoría
+  datos_resumen <- datos_cuali %>%
+    group_by(.data[[var]], zscore_pt) %>%
+    summarise(conteo = n(), .groups = 'drop') %>%
+    mutate(porcentaje = (conteo / sum(conteo)) * 100)
+
+  # Gráfico de barras con etiquetas en porcentaje
+  print(
+    ggplot(datos_resumen, aes(x = .data[[var]], y = porcentaje, fill = zscore_pt)) +
+      geom_bar(stat = "identity", position = "dodge") +
+      labs(title = paste("Distribución de", nombres_variables[var], "según clasificación nutricional"),
+           x = nombres_variables[var], 
+           y = "Recuento") +
+      theme_minimal() +
+      scale_fill_brewer(palette = "Set2") +
+      geom_text(aes(label = paste0(round(porcentaje, 1), "%")), 
+                position = position_dodge(width = 0.9), vjust = -0.5)
+  )
+}
