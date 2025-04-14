@@ -1,0 +1,57 @@
+Anexo 3. Ejecución del método de imputación de datos KNN
+
+# Instalar y cargar las librerías necesarias
+if (!require("readxl")) install.packages("readxl")
+if (!require("dplyr")) install.packages("dplyr")
+if (!require("VIM")) install.packages("VIM")
+if (!require("DMwR2")) install.packages("DMwR2") # Versión actualizada del paquete
+if (!require("writexl")) install.packages("writexl")
+
+library(readxl)
+library(dplyr)
+library(VIM)
+library(DMwR2)  # Cargar la versión actualizada
+library(writexl)
+
+# Leer el archivo Excel
+file_path <- "C:/Users/diefe/OneDrive/Escritorio/base_datos_pg.xlsx"
+data <- read_excel(file_path)
+
+# Seleccionar solo las columnas que necesitas
+data <- data %>%
+  select(edad_años, sexo_, Nom_barrio, estrato_, niv_educat, peso_nac, edad_ges, zscore_pt, per_braqui, peso_act, talla_act, imc, talla_nac, edema, piel_rese, hiperpigm, palidez)
+
+# Convertir los valores 0 en NA, excepto en la columna 'edad_años'
+data <- data %>%
+  mutate(across(-edad_años, ~ ifelse(. == 0, NA, .)))
+
+# Verificar los valores NA generados
+colSums(is.na(data))
+
+# Convertir columnas numéricas con comas a puntos y luego a numérico
+data <- data %>%
+  mutate(across(c(edad_años, peso_nac, edad_ges, zscore_pt, per_braqui, peso_act, talla_act, imc, talla_nac), 
+                ~ as.numeric(gsub(",", ".", .))))
+
+# Verificar la estructura de los datos
+str(data)
+
+# Imputar solo las columnas numéricas con KNN
+data_imputed <- data
+
+# Definir las columnas numéricas a imputar
+numeric_columns <- c("edad_años", "peso_nac", "edad_ges", "zscore_pt", "per_braqui", "peso_act", "talla_act", "imc", "talla_nac")
+
+# Aplicar la imputación KNN solo en las columnas numéricas
+data_imputed[numeric_columns] <- knnImputation(data[numeric_columns], k = 5)
+
+# Verificar si la imputación fue exitosa
+colSums(is.na(data_imputed))
+
+# Guardar el archivo imputado
+output_path <- "C:/Users/diefe/OneDrive/Escritorio/base_datos_pg_imputado.xlsx"
+write_xlsx(data_imputed, output_path)
+
+# Visualización adicional de datos faltantes
+vis_miss(data_imputed)
+ggsave("missing_data_miss.png")
