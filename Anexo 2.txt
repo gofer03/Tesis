@@ -1,0 +1,26 @@
+Anexo 2. Análisis de datos faltantes
+En esta sección, se implementa un procedimiento para detectar valores faltantes en cada variable y calcular la cantidad total de datos presentes y ausentes.
+
+# Reemplazar '0' con NA, excepto en la variable 'edad_años'
+data <- data %>%
+  mutate(across(.cols = everything(), ~ replace(.x, .x == 0, NA)),
+         edad_años = ifelse(is.na(edad_años), 0, edad_años))
+
+# Calcular el total de datos existentes y faltantes por variable
+total_data <- sapply(data, function(x) sum(!is.na(x)))
+missing_data <- sapply(data, function(x) sum(is.na(x)))
+
+# Mostrar resultados
+print("Total de datos existentes por variable:")
+print(total_data)
+print("Datos faltantes por variable:")
+print(missing_data)
+
+Visualización de datos faltantes
+# Visualizar los datos faltantes con la librería visdat
+vis_dat(data)
+ggsave("missing_data_visualization.png")
+
+# Visualización adicional de datos faltantes
+vis_miss(data)
+ggsave("missing_data_miss.png")
