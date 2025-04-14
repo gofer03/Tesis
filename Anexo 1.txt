@@ -1,0 +1,28 @@
+Anexo 1. Script en R para análisis exploratorio de datos
+Identificación de la naturaleza de las variables
+
+Este script permite identificar el tipo de datos de cada variable en la base de datos, así como generar un resumen estadístico preliminar.
+
+# Instalación de paquetes necesarios
+install.packages("skimr") 
+install.packages("table1")
+
+# Cargar las librerías necesarias
+library(readxl)  # Para leer el archivo Excel
+library(dplyr)   # Para manipulación de datos
+library(ggplot2) # Para visualizaciones de boxplots
+library(visdat)  # Para visualizar los datos faltantes
+library(skimr)
+library(table1)
+
+# Leer el archivo Excel
+file_path <- "C:/Users/diefe/OneDrive/Escritorio/base_datos_pg.xlsx"
+data <- read_excel(file_path)
+
+# Generar resumen estadístico de las variables
+skim(data)
+
+# Identificar variables y tipos de datos
+variable_info <- sapply(data, class)
+print("Tipos de datos por variable:")
+print(variable_info)
